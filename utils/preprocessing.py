@@ -67,12 +67,12 @@ def parse_lyrics_sections(lyrics):
 
 def get_parsed_data():
     df = pd.read_parquet("hf://datasets/mrYou/Lyrics_eng_dataset/data/train-00000-of-00001.parquet")
-    parsed_data = []
+    parsed_data = {}
     for i, row in enumerate(df.head(30).iterrows()):
         lyrics = row[1]["lyrics"]
         parsed_row = parse_lyrics_sections(lyrics)
         if parsed_row is not None:
-            parsed_data.append(parsed_row)
+            parsed_data[row[1]["id"]] = parsed_row
     return parsed_data
 
 def prepare_data_for_training(parsed_data):
