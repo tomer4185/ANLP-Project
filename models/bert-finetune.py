@@ -7,15 +7,19 @@ from torch.nn import CrossEntropyLoss
 from torch import nn
 import torch
 from datasets import Dataset
+from utils.preprocessing import get_data
 
 class CustomBertModel(nn.Module):
     def __init__(self, model_name, num_labels):
         super(CustomBertModel, self).__init__()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.bert = BertForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
+        self.to(self.device)
 
     def forward(self, input_ids, attention_mask=None, labels=None):
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
         return outputs
+
 class BertFineTuner:
     def __init__(self, model_name, num_labels, learning_rate=5e-5, batch_size=32, epochs=10):
         self.tokenizer = BertTokenizer.from_pretrained(model_name)
@@ -25,27 +29,7 @@ class BertFineTuner:
         self.epochs = epochs
         self.optimizer = AdamW(self.model.parameters(), lr=self.learning_rate)
 
-    def prepare_data(self, dataset_name):
-        # dataset = load_dataset(dataset_name)
-        # train_dataset = dataset['train']
-        # test_dataset = dataset['test']
-        train_data = pd.DataFrame([
-            {'text': 'This is a dog class.', 'label': 1},
-            {'text': 'all dogs are cute', 'label': 1},
-            {'text': 'I am loving my new dog, it is a golden retriever', 'label': 1},
-            {'text': 'everybody needs a dog', 'label': 1},
-            {'text': 'This is a cat class.', 'label': 0},
-            {'text': 'cats are leaking themselves', 'label': 0},
-            {'text': 'I have a red hair class.', 'label': 0},
-            {'text': 'cats should be clean', 'label': 0},
-            {'text': 'I want a cat!.', 'label': 0}
-        ])
-        test_data = pd.DataFrame([
-            {'text' : "cat class", 'label': 0},
-            {'text' : "dog class", 'label': 1},
-            {"text" : "do you like cats?", 'label': 0},
-            {"text" : "do you like dogs?", 'label': 1},
-            ])
+    def prepare_data(self, train_data, test_data):
         #make example dataset:
         train_dataset = Dataset.from_pandas(train_data)
         test_dataset = Dataset.from_pandas(test_data)
@@ -56,15 +40,15 @@ class BertFineTuner:
         train_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
         test_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
 
-        return DataLoader(train_dataset, batch_size=self.batch_size), DataLoader(test_dataset, batch_size=self.batch_size)
+        return DataLoader(train_dataset, batch_size=self.batch_size, pin_memory=True), DataLoader(test_dataset, batch_size=self.batch_size, pin_memory=True)
 
     def train(self, train_loader):
         self.model.train()
         for epoch in range(self.epochs):
             for batch in train_loader:
-                input_ids = batch['input_ids']
-                attention_mask = batch['attention_mask']
-                labels = batch['label']
+                input_ids = batch['input_ids'].to(self.model.device)
+                attention_mask = batch['attention_mask'].to(self.model.device)
+                labels = batch['label'].to(self.model.device)
 
                 self.optimizer.zero_grad()
                 outputs = self.model(input_ids, attention_mask=attention_mask, labels=labels)
@@ -82,9 +66,9 @@ class BertFineTuner:
 
         with torch.no_grad():
             for batch in test_loader:
-                input_ids = batch['input_ids']
-                attention_mask = batch['attention_mask']
-                labels = batch['label']
+                input_ids = batch['input_ids'].to(self.model.device)
+                attention_mask = batch['attention_mask'].to(self.model.device)
+                labels = batch['label'].to(self.model.device)
 
                 outputs = self.model(input_ids, attention_mask=attention_mask, labels=labels)
                 loss = outputs.loss
@@ -105,7 +89,11 @@ if __name__ == "__main__":
     dataset_name = 'mrYou/Lyrics_eng_dataset'
 
     bert_fine_tuner = BertFineTuner(model_name, num_labels)
-    train_loader, test_loader = bert_fine_tuner.prepare_data(dataset_name)
+    data = get_data()
+    # split the data into train and test sets
+    train_data = data.sample(frac=0.8, random_state=42)
+    test_data = data.drop(train_data.index)
+    train_loader, test_loader = bert_fine_tuner.prepare_data(train_data, test_data)
 
     bert_fine_tuner.train(train_loader)
     bert_fine_tuner.evaluate(test_loader)

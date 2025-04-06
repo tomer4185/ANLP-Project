@@ -1,6 +1,8 @@
 import pandas as pd
 import re
 
+LABELS= {"verse": 0, "chorus": 1}
+
 def parse_lyrics_sections(lyrics):
     # Define valid section labels with regex support
     valid_labels = [
@@ -68,18 +70,38 @@ def parse_lyrics_sections(lyrics):
 def get_parsed_data():
     df = pd.read_parquet("hf://datasets/mrYou/Lyrics_eng_dataset/data/train-00000-of-00001.parquet")
     parsed_data = {}
-    for i, row in enumerate(df.head(30).iterrows()):
+    for i, row in enumerate(df.head(1000).iterrows()):
         lyrics = row[1]["lyrics"]
         parsed_row = parse_lyrics_sections(lyrics)
         if parsed_row is not None:
             parsed_data[row[1]["id"]] = parsed_row
     return parsed_data
 
-def prepare_data_for_training(parsed_data):
-    # This function should prepare the parsed data for training
-    # For example, you might want to convert it into a format suitable for your model
-    pass
+def build_format_text(part_text, section_context):
+    # build the formated text
+    # the form for each part should be in the form of [CLS] current_part_text [SEP] full_song_context [SEP]
+    formated_text = f"[CLS] {part_text} [SEP] {section_context} [SEP]"
+    return formated_text
 
-if __name__ == "__main__":
+def prepare_data_for_training(parsed_data):
+    # build the data to train the model
+    # the form for each part should be in the form of [CLS] current_part_text [SEP] full_song_context [SEP]
+    data = []
+    for song_id, sections in parsed_data.items():
+        for i, (part_text, section) in enumerate(sections.items()):
+            if section not in LABELS.keys():
+                continue
+            # get section context
+            section_context = [text for text in sections if text != part_text]
+            section_context = " ".join(section_context)
+            # build the data
+            format_text = build_format_text(part_text, section_context)
+            data.append((format_text, LABELS[section]))
+    return pd.DataFrame(data, columns=["text", "label"])
+
+
+def get_data():
     parsed_data = get_parsed_data()
+    data = prepare_data_for_training(parsed_data)
     print("data parsed")
+    return data
