@@ -1,2 +1,2 @@
 # ANLP-Project
-Classification of corus and verses
+Classification of chorus and verses
