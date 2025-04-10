@@ -4,6 +4,11 @@ import re
 LABELS= {"verse": 0, "chorus": 1}
 
 def parse_lyrics_sections(lyrics):
+    """
+    parses the lyrics of the song into sections (chorus, verse, bridge, etc.)
+    :param lyrics: the whole lyrics of the song
+    :return: the lyrics parsed, or None if the song parts are not mentioned or do not include a chorus
+    """
     # Define valid section labels with regex support
     valid_labels = [
         'intro',
@@ -67,7 +72,13 @@ def parse_lyrics_sections(lyrics):
 
     return result if saw_chorus and result else None
 
-def get_parsed_data():
+def get_parsed_data() -> dict:
+    """
+    fetches parsed data from the database.
+    returns a dict of ficts,
+    where the keys are the ids of the songs, and the values are dicts, one per song,
+    whose keys are the lyrics of a part of the song, and its label (verse, chorus, bridge, etc.)
+    """
     df = pd.read_parquet("hf://datasets/mrYou/Lyrics_eng_dataset/data/train-00000-of-00001.parquet")
     parsed_data = {}
     for i, row in enumerate(df.head(1000).iterrows()):
@@ -80,12 +91,21 @@ def get_parsed_data():
 def build_format_text(part_text, section_context):
     # build the formated text
     # the form for each part should be in the form of [CLS] current_part_text [SEP] full_song_context [SEP]
-    formated_text = f"[CLS] {part_text} [SEP] {section_context} [SEP]"
-    return formated_text
+    formatted_text = f"[CLS] {part_text} [SEP] {section_context} [SEP]"
+    return formatted_text
 
 def prepare_data_for_training(parsed_data):
-    # build the data to train the model
-    # the form for each part should be in the form of [CLS] current_part_text [SEP] full_song_context [SEP]
+    """
+    Build the data to train the model
+    The parser neglects parts-of-song that are not chorus or verse
+    The form for each part should be in the form of [CLS] current_part_text [SEP] full_song_context [SEP]
+    :param parsed_data: the whole data in the format of dict of dicts
+    :return: a pandas df where each row represents a part of a song,
+    and contains as text the lyrics in the format of
+    [CLS] {part_text} [SEP] {section_context} [SEP], where the section_context is all the other parts of songs, concatenated
+    the label is 0 if the part_text is verse and 0 if chorus
+    """
+
     data = []
     for song_id, sections in parsed_data.items():
         for i, (part_text, section) in enumerate(sections.items()):
@@ -93,6 +113,10 @@ def prepare_data_for_training(parsed_data):
                 continue
             # get section context
             section_context = [text for text in sections if text != part_text]
+            # todo: dont we want to randomize it?
+            # todo: leave only one chorus per song?
+            if len (section_context) < 2:
+                continue
             section_context = " ".join(section_context)
             # build the data
             format_text = build_format_text(part_text, section_context)
@@ -101,6 +125,9 @@ def prepare_data_for_training(parsed_data):
 
 
 def get_data():
+    """
+    check out prepare_data_for_training
+    """
     parsed_data = get_parsed_data()
     data = prepare_data_for_training(parsed_data)
     print("data parsed")
