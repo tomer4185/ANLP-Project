@@ -99,6 +99,6 @@ if __name__ == "__main__":
     bert_fine_tuner.evaluate(test_loader)
 
     # Save the model
-    # bert_fine_tuner.model.save_pretrained('./fine_tuned_bert')
-    # bert_fine_tuner.tokenizer.save_pretrained('./fine_tuned_bert')
+    bert_fine_tuner.model.save_pretrained('./fine_tuned_bert')
+    bert_fine_tuner.tokenizer.save_pretrained('./fine_tuned_bert')
 

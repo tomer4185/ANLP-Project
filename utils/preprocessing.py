@@ -81,11 +81,11 @@ def get_parsed_data() -> dict:
     """
     df = pd.read_parquet("hf://datasets/mrYou/Lyrics_eng_dataset/data/train-00000-of-00001.parquet")
     parsed_data = {}
-    for i, row in enumerate(df.head(1000).iterrows()):
+    for i, row in enumerate(df.head(2000).iterrows()):
         lyrics = row[1]["lyrics"]
         parsed_row = parse_lyrics_sections(lyrics)
         if parsed_row is not None:
-            parsed_data[row[1]["id"]] = parsed_row
+            parsed_data[row[1]["id"]] = parsed_row # key is preserving uniqueness of the parts(chorus and verse)
     return parsed_data
 
 def build_format_text(part_text, section_context):
