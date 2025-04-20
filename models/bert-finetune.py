@@ -8,6 +8,7 @@ from torch import nn
 import torch
 from datasets import Dataset
 from utils.preprocessing import get_data
+import os
 
 class CustomBertModel(nn.Module):
     def __init__(self, model_name, num_labels):
@@ -19,6 +20,9 @@ class CustomBertModel(nn.Module):
     def forward(self, input_ids, attention_mask=None, labels=None):
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
         return outputs
+
+    def save_pretrained(self, save_directory):
+        self.bert.save_pretrained(save_directory)
 
 class BertFineTuner:
     def __init__(self, model_name, num_labels, learning_rate=5e-5, batch_size=32, epochs=10):
@@ -63,6 +67,7 @@ class BertFineTuner:
         total_loss = 0
         correct_predictions = 0
         total_predictions = 0
+        all_predictions = []
 
         with torch.no_grad():
             for batch in test_loader:
@@ -76,12 +81,17 @@ class BertFineTuner:
 
                 total_loss += loss.item()
                 predictions = torch.argmax(logits, dim=-1)
+                all_predictions.append(predictions.cpu())
                 correct_predictions += (predictions == labels).sum().item()
                 total_predictions += labels.size(0)
 
         avg_loss = total_loss / len(test_loader)
         accuracy = correct_predictions / total_predictions
         print(f"Test Loss: {avg_loss}, Accuracy: {accuracy}")
+        # save the predictions to df
+        predictions = torch.cat(all_predictions).numpy()
+        test_df = pd.DataFrame(predictions, columns=["predictions"])
+        test_df.to_parquet("./data/test_predictions.parquet")
 
 if __name__ == "__main__":
     model_name = 'bert-base-uncased'
@@ -93,12 +103,39 @@ if __name__ == "__main__":
     # split the data into train and test sets
     train_data = data.sample(frac=0.8, random_state=42)
     test_data = data.drop(train_data.index)
+    # save the data to parquet
+    if not os.path.exists('./data'):
+        os.makedirs('./data')
+    train_data.to_parquet("./data/train_data.parquet")
+    test_data.to_parquet("./data/test_data.parquet")
     train_loader, test_loader = bert_fine_tuner.prepare_data(train_data, test_data)
 
     bert_fine_tuner.train(train_loader)
     bert_fine_tuner.evaluate(test_loader)
 
     # Save the model
-    bert_fine_tuner.model.save_pretrained('./fine_tuned_bert')
-    bert_fine_tuner.tokenizer.save_pretrained('./fine_tuned_bert')
+    # create the directory if it does not exist
+    if not os.path.exists('./Results'):
+        os.makedirs('./Results')
+    bert_fine_tuner.model.save_pretrained('./Results/fine_tuned_bert')
+    bert_fine_tuner.tokenizer.save_pretrained('./Results/fine_tuned_bert')
+
+    ############################################################################
+
+    # Load the model and tokenizer
+    # Specify the directory where the model and tokenizer were saved
+    # save_directory = './Results/fine_tuned_bert'
+    #
+    # # Load the tokenizer
+    # tokenizer = BertTokenizer.from_pretrained(save_directory)
+    #
+    # # Load the model
+    # model = BertForSequenceClassification.from_pretrained(save_directory)
+    #
+    # # Example usage
+    # text = "This is a test sentence."
+    # inputs = tokenizer(text, return_tensors="pt", truncation=True,
+    #                    padding="max_length", max_length=512)
+    # outputs = model(**inputs)
+    # print(outputs)
 

@@ -131,4 +131,6 @@ def get_data():
     parsed_data = get_parsed_data()
     data = prepare_data_for_training(parsed_data)
     print("data parsed")
+    # save the data (a pandas df) to a parquet file
+    data.to_parquet("./data/full_data.parquet", index=False)
     return data
