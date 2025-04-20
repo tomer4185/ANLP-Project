@@ -72,7 +72,7 @@ def parse_lyrics_sections(lyrics):
 
     return result if saw_chorus and result else None
 
-def get_parsed_data() -> dict:
+def get_parsed_data(number_of_songs=2000) -> dict:
     """
     fetches parsed data from the database.
     returns a dict of ficts,
@@ -81,7 +81,7 @@ def get_parsed_data() -> dict:
     """
     df = pd.read_parquet("hf://datasets/mrYou/Lyrics_eng_dataset/data/train-00000-of-00001.parquet")
     parsed_data = {}
-    for i, row in enumerate(df.head(2000).iterrows()):
+    for i, row in enumerate(df.head(number_of_songs).iterrows()):
         lyrics = row[1]["lyrics"]
         parsed_row = parse_lyrics_sections(lyrics)
         if parsed_row is not None:
