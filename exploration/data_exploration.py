@@ -1,5 +1,6 @@
 import re
 import matplotlib.pyplot as plt
+import numpy as np
 from torch.optim import AdamW
 from torch.nn import CrossEntropyLoss
 from torch import nn
@@ -7,6 +8,7 @@ import torch
 import pandas as pd
 from datasets import Dataset
 from utils.preprocessing import get_parsed_data, get_data
+import seaborn as sns
 import os
 import pronouncing
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -37,7 +39,7 @@ def number_of_words_plot(data):
     plt.ylabel("Frequency")
     plt.title("Histogram of verses")
     plt.legend()
-    plt.savefig("../../plots/word_count_hist.png")
+    plt.savefig("../plots/word_count_hist.png")
     # plt.show()
 
 
@@ -163,6 +165,7 @@ def calculate_repetition_score(data):
     plt.savefig("../plots/repetitiveness_score.png")
     plt.close(fig)
 
+# def calculate_unique_words(data):
 
 def rhyme_density(text):
     def words_rhyme(word1, word2):
@@ -192,8 +195,7 @@ def calculate_rhyme_avg(data):
             if song_part == 'verse':
                 verse_data.append(rhyme_density(lyrics))
 
-
-    plt.hist(chorus_data, bins=50, alpha=0.7, color='skyblue', density=True)
+    plt.hist(chorus_data, bins=50, alpha=1.0, color='white', density=True)
     plt.hist(verse_data, bins=50, alpha=0.7, color='lightcoral', density=True)  # Removed 'label'
 
     # Set axis limits
@@ -214,10 +216,10 @@ def calculate_rhyme_avg(data):
 if __name__ == '__main__':
     # 8. precision and recall (Tomer)
     # run_precision_and_recall()
-    # 1. number_of_words_plot(data)
-    number_of_row_plot(data)
-    calculate_repetition_score(data)
-    calculate_rhyme_avg(data)
+    number_of_words_plot(data)
+    # number_of_row_plot(data)
+    # calculate_repetition_score(data)
+    # calculate_rhyme_avg(data)
 
 # 2. nuber of tokens (Shaked)
 
