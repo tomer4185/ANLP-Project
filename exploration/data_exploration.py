@@ -8,6 +8,7 @@ import pandas as pd
 from datasets import Dataset
 from utils.preprocessing import get_parsed_data, get_data
 import os
+import pronouncing
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # TODO: check about the weird token in the first song in get_data
@@ -30,8 +31,8 @@ def number_of_words_plot(data):
 
     print(len(verse_wc))
     print(len(chorus_wc))
-    plt.hist(verse_wc, bins=50, color='blue', alpha=0.6, label='verse', edgecolor='black', density=True)
-    plt.hist(chorus_wc, bins=50, color='orange', alpha=0.6, label='chorus', edgecolor='black', density=True)
+    plt.hist(verse_wc, bins=50, color='lightcoral', alpha=0.6, label='verse', density=True)
+    plt.hist(chorus_wc, bins=50, color='skyblue', alpha=0.6, label='chorus', density=True)
     plt.xlabel("Amount of Word in Part")
     plt.ylabel("Frequency")
     plt.title("Histogram of verses")
@@ -56,8 +57,8 @@ def number_of_row_plot(data):
 
     print(len(verse_rows_count))
     print(len(chorus_rows_count))
-    plt.hist(verse_rows_count, bins=50, color='blue', alpha=0.6, label='verse', edgecolor='black', density=True)
-    plt.hist(chorus_rows_count, bins=50, color='orange', alpha=0.6, label='chorus', edgecolor='black', density=True)
+    plt.hist(verse_rows_count, bins=50, color='lightcoral', alpha=0.6, label='verse', density=True)
+    plt.hist(chorus_rows_count, bins=50, color='skyblue', alpha=0.6, label='chorus', density=True)
     plt.xlabel("Amount of Rows in Part")
     plt.ylabel("Frequency")
     plt.title("Histogram of the Rows in Verses")
@@ -159,15 +160,65 @@ def calculate_repetition_score(data):
     axes[1].legend()
 
     plt.tight_layout()
-    plt.show()
+    plt.savefig("../plots/repetitiveness_score.png")
+    plt.close(fig)
 
+
+def rhyme_density(text):
+    def words_rhyme(word1, word2):
+        rhymes = pronouncing.rhymes(word1.lower())
+        return word2.lower() in rhymes
+    lines = text.strip().split('\n')
+    endings = [line.strip().split()[-1] for line in lines if line.strip()]
+
+    rhyme_count = 0
+    total_pairs = 0
+
+    for i in range(len(endings) - 1):
+        if words_rhyme(endings[i], endings[i + 1]):
+            rhyme_count += 1
+        total_pairs += 1
+
+    if total_pairs == 0:
+        return 0.0
+    return rhyme_count / total_pairs
+
+def calculate_rhyme_avg(data):
+    chorus_data, verse_data = [], []
+    for v in data.values():
+        for lyrics, song_part in v.items():
+            if song_part == 'chorus':
+                chorus_data.append(rhyme_density(lyrics))
+            if song_part == 'verse':
+                verse_data.append(rhyme_density(lyrics))
+
+
+    plt.hist(chorus_data, bins=50, alpha=0.7, color='skyblue', density=True)
+    plt.hist(verse_data, bins=50, alpha=0.7, color='lightcoral', density=True)  # Removed 'label'
+
+    # Set axis limits
+    plt.xlim(0, 1)
+    plt.ylim(0, 40)
+
+    # Title and labels
+    plt.title('Rhyming Percentages')
+    plt.xlabel('Inter-part Rhyming Ratio')
+    plt.ylabel('Frequency')
+
+    # Add legend (it will show only 'Chorus' and 'Verse')
+    plt.legend()
+
+    # Save the plot
+    plt.savefig("../plots/rhyming_score.png")
 
 if __name__ == '__main__':
     # 8. precision and recall (Tomer)
     # run_precision_and_recall()
     # 1. number_of_words_plot(data)
-    # number_of_row_plot(data)
+    number_of_row_plot(data)
     calculate_repetition_score(data)
+    calculate_rhyme_avg(data)
+
 # 2. nuber of tokens (Shaked)
 
 # 3. number of sentences/rows (Shaked)
@@ -176,3 +227,6 @@ if __name__ == '__main__':
 # 6. rhymes checking (Ariel)
 # 7. number of unique words (Shaked)
 # 9. single chorus in the song (Tomer)
+
+
+
