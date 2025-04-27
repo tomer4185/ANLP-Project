@@ -1,3 +1,5 @@
+import random
+
 import pandas as pd
 import re
 
@@ -39,6 +41,7 @@ def parse_lyrics_sections(lyrics):
     current_section = None
     current_lines = []
     saw_chorus = False
+    chorus_added = False  # Track if we've already added a chorus
 
     for line in lines:
         match = section_header_pattern.match(line)
@@ -47,14 +50,22 @@ def parse_lyrics_sections(lyrics):
             if current_section and current_lines:
                 part_text = '\n'.join(current_lines).strip()
                 if part_text:
-                    result[part_text] = current_section
+                    # Only add the first chorus
+                    if current_section == 'chorus':
+                        if not chorus_added:
+                            result[part_text] = current_section
+                            chorus_added = True
+                            saw_chorus = True
+                    else:
+                        result[part_text] = current_section
                 current_lines = []
 
             # Normalize tag (remove spaces and dashes)
             tag = match.group(1).lower().replace(' ', '').replace('-', '')
             if tag in ['chorus', 'prechorus', 'postchorus']:
                 current_section = tag  # keep as-is
-                saw_chorus = True
+                if tag == 'chorus':
+                    saw_chorus = True  # We've seen a chorus, even if we don't add it
             elif 'verse' in tag:
                 current_section = 'verse'
             elif tag in ['intro', 'bridge', 'outro', 'refrain']:
@@ -68,14 +79,20 @@ def parse_lyrics_sections(lyrics):
     if current_section and current_lines:
         part_text = '\n'.join(current_lines).strip()
         if part_text:
-            result[part_text] = current_section
+            # Only add the first chorus
+            if current_section == 'chorus':
+                if not chorus_added:
+                    result[part_text] = current_section
+                    chorus_added = True
+            else:
+                result[part_text] = current_section
 
     return result if saw_chorus and result else None
 
-def get_parsed_data(number_of_songs=2000) -> dict:
+def get_parsed_data(number_of_songs = 2000) -> dict:
     """
     fetches parsed data from the database.
-    returns a dict of ficts,
+    returns a dict of dicts,
     where the keys are the ids of the songs, and the values are dicts, one per song,
     whose keys are the lyrics of a part of the song, and its label (verse, chorus, bridge, etc.)
     """
@@ -108,6 +125,7 @@ def prepare_data_for_training(parsed_data):
 
     data = []
     for song_id, sections in parsed_data.items():
+        song_data = []
         for i, (part_text, section) in enumerate(sections.items()):
             if section not in LABELS.keys():
                 continue
@@ -120,8 +138,11 @@ def prepare_data_for_training(parsed_data):
             section_context = " ".join(section_context)
             # build the data
             format_text = build_format_text(part_text, section_context)
-            data.append((format_text, LABELS[section]))
-    return pd.DataFrame(data, columns=["text", "label"])
+            song_data.append((song_id, format_text, LABELS[section]))
+        if len(song_data)>1:
+            random.shuffle(song_data)
+            data.extend(song_data)
+    return pd.DataFrame(data, columns=["song_id", "text", "label"])
 
 
 def get_data():
@@ -131,6 +152,4 @@ def get_data():
     parsed_data = get_parsed_data()
     data = prepare_data_for_training(parsed_data)
     print("data parsed")
-    # save the data (a pandas df) to a parquet file
-    data.to_parquet("./data/full_data.parquet", index=False)
     return data

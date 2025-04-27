@@ -7,6 +7,8 @@ import torch
 import pandas as pd
 from datasets import Dataset
 from utils.preprocessing import get_parsed_data, get_data
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # TODO: check about the weird token in the first song in get_data
 data = get_parsed_data(number_of_songs=20000)
@@ -34,7 +36,7 @@ def number_of_words_plot(data):
     plt.ylabel("Frequency")
     plt.title("Histogram of verses")
     plt.legend()
-    plt.savefig("../plots/word_count_hist.png")
+    plt.savefig("../../plots/word_count_hist.png")
     # plt.show()
 
 
@@ -60,6 +62,7 @@ def number_of_row_plot(data):
     plt.ylabel("Frequency")
     plt.title("Histogram of the Rows in Verses")
     plt.legend()
+    os.makedirs("../plots", exist_ok=True)
     plt.savefig("../plots/rows_count_hist.png")
     # plt.show()
 
@@ -92,12 +95,79 @@ def run_precision_and_recall():
     precision, recall = calculate_precision_and_recall(predictions, true_labels)
     print(f"Precision: {precision}, Recall: {recall}")
 
+
+def unigram_repetition_score(text):
+    # Lowercase and split text into words (basic cleaning)
+    words = re.findall(r'\b\w+\b', text.lower())
+
+    if not words:
+        return 0.0  # Avoid division by zero
+
+    unique_words = set(words)
+    total_words = len(words)
+    repetitiveness = 1 - len(unique_words) / total_words
+
+    return repetitiveness
+
+
+def bigram_repetition_score(text):
+    # Lowercase and split text into words
+    words = re.findall(r'\b\w+\b', text.lower())
+
+    if len(words) < 2:
+        return 0.0  # No bigrams possible
+
+    # Create bigrams
+    bigrams = [(words[i], words[i + 1]) for i in range(len(words) - 1)]
+
+    total_bigrams = len(bigrams)
+    unique_bigrams = len(set(bigrams))
+
+    repetitiveness = 1 - unique_bigrams / total_bigrams
+
+    return repetitiveness
+
+def calculate_repetition_score(data):
+    chorus_unigram, verse_unigram, chorus_bigram, verse_bigram = [], [], [], []
+
+    for v in data.values():
+        for lyrics, song_part in v.items():
+            if song_part == 'chorus':
+                chorus_unigram.append(unigram_repetition_score(lyrics))
+                chorus_bigram.append(bigram_repetition_score(lyrics))
+            if song_part == 'verse':
+                verse_unigram.append(unigram_repetition_score(lyrics))
+                verse_bigram.append(bigram_repetition_score(lyrics))
+
+    # Create a figure with two subplots
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    # Unigram repetition plot
+    axes[0].hist(chorus_unigram, bins=20, alpha=0.7, label='Chorus', color='skyblue', density=True)
+    axes[0].hist(verse_unigram, bins=20, alpha=0.7, label='Verse', color='lightcoral', density=True)
+    axes[0].set_title('Unigram Repetition (Normalized)')
+    axes[0].set_xlabel('Repetition Score')
+    axes[0].set_ylabel('Density')
+    axes[0].legend()
+
+    # Bigram repetition plot
+    axes[1].hist(chorus_bigram, bins=20, alpha=0.7, label='Chorus', color='skyblue', density=True)
+    axes[1].hist(verse_bigram, bins=20, alpha=0.7, label='Verse', color='lightcoral', density=True)
+    axes[1].set_title('Bigram Repetition (Normalized)')
+    axes[1].set_xlabel('Repetition Score')
+    axes[1].set_ylabel('Density')
+    axes[1].legend()
+
+    plt.tight_layout()
+    plt.show()
+
+
 if __name__ == '__main__':
     # 8. precision and recall (Tomer)
-    run_precision_and_recall()
+    # run_precision_and_recall()
     # 1. number_of_words_plot(data)
-    number_of_row_plot(data)
-
+    # number_of_row_plot(data)
+    calculate_repetition_score(data)
 # 2. nuber of tokens (Shaked)
 
 # 3. number of sentences/rows (Shaked)
