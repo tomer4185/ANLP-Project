@@ -35,7 +35,7 @@ def number_of_words_plot(data):
     print(len(chorus_wc))
     plt.hist(verse_wc, bins=50, color='lightcoral', alpha=0.6, label='verse', density=True)
     plt.hist(chorus_wc, bins=50, color='skyblue', alpha=0.6, label='chorus', density=True)
-    plt.xlabel("Amount of Word in Part")
+    plt.xlabel("Amount of Words in Part")
     plt.ylabel("Frequency")
     plt.title("Amount of Words")
     plt.legend()
@@ -98,6 +98,40 @@ def run_precision_and_recall():
     precision, recall = calculate_precision_and_recall(predictions, true_labels)
     print(f"Precision: {precision}, Recall: {recall}")
 
+
+def unique_word_ratio(paragraph):
+    """
+    Calculate the ratio of unique words to total words in a paragraph.
+
+    Args:
+        paragraph (str): Text to analyze, may include newlines
+
+    Returns:
+        float: Ratio of unique words to total words (0.0 to 1.0)
+    """
+    # Handle empty input
+    if not paragraph or paragraph.isspace():
+        return 0.0
+
+    # Split into words and remove punctuation and convert to lowercase
+    words = paragraph.lower().split()
+
+    # Clean words (remove punctuation)
+    cleaned_words = []
+    for word in words:
+        cleaned_word = ''.join(char for char in word if char.isalnum() or char == "'")
+        if cleaned_word:  # Only add non-empty strings
+            cleaned_words.append(cleaned_word)
+
+    # Count total words and unique words
+    total_words = len(cleaned_words)
+    unique_words = len(set(cleaned_words))
+
+    # Calculate ratio
+    if total_words == 0:
+        return 0.0
+
+    return unique_words / total_words
 
 def unigram_repetition_score(text):
     # Lowercase and split text into words (basic cleaning)
@@ -165,7 +199,24 @@ def calculate_repetition_score(data):
     plt.savefig("../plots/repetitiveness_score.png")
     plt.close(fig)
 
-# def calculate_unique_words(data):
+def calculate_unique_words(data):
+    chorus_data, verse_data =[], []
+    for v in data.values():
+        for lyrics, song_part in v.items():
+            if song_part == 'chorus':
+                chorus_data.append(unique_word_ratio(lyrics)*100)
+            if song_part == 'verse':
+                verse_data.append(unique_word_ratio(lyrics)*100)
+
+    plt.hist(verse_data, bins=50, color='lightcoral', alpha=0.6, label='verse', density=True)
+    plt.hist(chorus_data, bins=50, color='skyblue', alpha=0.6, label='chorus', density=True)
+    plt.xlabel("Ratio of Unique Words")
+    plt.ylabel("Frequency")
+    # plt.title("Histogram of the Rows in Verses")
+    plt.legend()
+    os.makedirs("../plots", exist_ok=True)
+    plt.savefig("../plots/unique_words_hist.png")
+
 
 def rhyme_density(text):
     def words_rhyme(word1, word2):

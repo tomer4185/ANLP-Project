@@ -35,7 +35,7 @@ def parse_lyrics_sections(lyrics):
 
     # First line must be a section label
     if not lines or not section_header_pattern.match(lines[0]):
-        return None
+        return 1,None
 
     result = {}
     current_section = None
@@ -96,13 +96,16 @@ def get_parsed_data(number_of_songs = 2000) -> dict:
     where the keys are the ids of the songs, and the values are dicts, one per song,
     whose keys are the lyrics of a part of the song, and its label (verse, chorus, bridge, etc.)
     """
+
     df = pd.read_parquet("hf://datasets/mrYou/Lyrics_eng_dataset/data/train-00000-of-00001.parquet")
+    print(f"initial num of songs {len(df)}")
     parsed_data = {}
     for i, row in enumerate(df.head(number_of_songs).iterrows()):
         lyrics = row[1]["lyrics"]
         parsed_row = parse_lyrics_sections(lyrics)
         if parsed_row is not None:
             parsed_data[row[1]["id"]] = parsed_row # key is preserving uniqueness of the parts(chorus and verse)
+    print(f"final num of songs {len(parsed_data)}")
     return parsed_data
 
 def build_format_text(part_text, section_context):
