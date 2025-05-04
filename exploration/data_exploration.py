@@ -37,7 +37,7 @@ def number_of_words_plot(data):
     plt.hist(chorus_wc, bins=50, color='skyblue', alpha=0.6, label='chorus', density=True)
     plt.xlabel("Amount of Word in Part")
     plt.ylabel("Frequency")
-    plt.title("Histogram of verses")
+    plt.title("Amount of Words")
     plt.legend()
     plt.savefig("../plots/word_count_hist.png")
     # plt.show()
@@ -63,9 +63,9 @@ def number_of_row_plot(data):
     plt.hist(chorus_rows_count, bins=50, color='skyblue', alpha=0.6, label='chorus', density=True)
     plt.xlabel("Amount of Rows in Part")
     plt.ylabel("Frequency")
-    plt.title("Histogram of the Rows in Verses")
+    plt.title("Amount of Rows")
     plt.legend()
-    os.makedirs("../plots", exist_ok=True)
+    # os.makedirs("../plots", exist_ok=True)
     plt.savefig("../plots/rows_count_hist.png")
     # plt.show()
 
@@ -146,16 +146,16 @@ def calculate_repetition_score(data):
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
     # Unigram repetition plot
-    axes[0].hist(chorus_unigram, bins=20, alpha=0.7, label='Chorus', color='skyblue', density=True)
-    axes[0].hist(verse_unigram, bins=20, alpha=0.7, label='Verse', color='lightcoral', density=True)
+    axes[0].hist(np.array(chorus_unigram)*100, bins=20, alpha=0.7, label='Chorus', color='skyblue', density=True)
+    axes[0].hist(np.array(verse_unigram)*100, bins=20, alpha=0.7, label='Verse', color='lightcoral', density=True)
     axes[0].set_title('Unigram Repetition (Normalized)')
     axes[0].set_xlabel('Repetition Score')
     axes[0].set_ylabel('Density')
     axes[0].legend()
 
     # Bigram repetition plot
-    axes[1].hist(chorus_bigram, bins=20, alpha=0.7, label='Chorus', color='skyblue', density=True)
-    axes[1].hist(verse_bigram, bins=20, alpha=0.7, label='Verse', color='lightcoral', density=True)
+    axes[1].hist(np.array(chorus_bigram)*100, bins=20, alpha=0.7, label='Chorus', color='skyblue', density=True)
+    axes[1].hist(np.array(verse_bigram)*100, bins=20, alpha=0.7, label='Verse', color='lightcoral', density=True)
     axes[1].set_title('Bigram Repetition (Normalized)')
     axes[1].set_xlabel('Repetition Score')
     axes[1].set_ylabel('Density')
@@ -195,12 +195,12 @@ def calculate_rhyme_avg(data):
             if song_part == 'verse':
                 verse_data.append(rhyme_density(lyrics))
 
-    plt.hist(chorus_data, bins=50, alpha=1.0, color='white', density=True)
-    plt.hist(verse_data, bins=50, alpha=0.7, color='lightcoral', density=True)  # Removed 'label'
+    plt.hist(np.array(chorus_data)*100, bins=50, alpha=0.7, label='Chorus', color='skyblue', density=True)
+    plt.hist(np.array(verse_data)*100, bins=50, alpha=0.7, label='Verse', color='lightcoral', density=True)  # Removed 'label'
 
     # Set axis limits
-    plt.xlim(0, 1)
-    plt.ylim(0, 40)
+    # plt.xlim(0, 1)
+    # plt.ylim(0, 40)
 
     # Title and labels
     plt.title('Rhyming Percentages')
@@ -216,9 +216,9 @@ def calculate_rhyme_avg(data):
 if __name__ == '__main__':
     # 8. precision and recall (Tomer)
     # run_precision_and_recall()
-    number_of_words_plot(data)
+    # number_of_words_plot(data)
     # number_of_row_plot(data)
-    # calculate_repetition_score(data)
+    calculate_repetition_score(data)
     # calculate_rhyme_avg(data)
 
 # 2. nuber of tokens (Shaked)
