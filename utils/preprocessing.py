@@ -156,3 +156,19 @@ def get_data():
     data = prepare_data_for_training(parsed_data)
     print("data parsed")
     return data
+
+def create_data_for_Longformer():
+    """
+    Each line = {"raw": "[CLS] ... [SEP] ...", "labels": [0,1,0,...]}
+    """
+    data = get_data()
+    data["raw"] = data["text"]
+    data["labels"] = data["label"]
+    data = data[["raw", "labels"]]
+    data.to_json("../data/train.jsonl", orient="records", lines=True)
+    data.to_json("../data/valid.jsonl", orient="records", lines=True)
+
+if __name__ == "__main__":
+    create_data_for_Longformer()
+
+
