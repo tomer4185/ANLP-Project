@@ -35,7 +35,7 @@ def parse_lyrics_sections(lyrics):
 
     # First line must be a section label
     if not lines or not section_header_pattern.match(lines[0]):
-        return 1,None
+        return None
 
     result = {}
     current_section = None
@@ -108,11 +108,14 @@ def get_parsed_data(number_of_songs = 2000) -> dict:
     print(f"final num of songs {len(parsed_data)}")
     return parsed_data
 
-def build_format_text(part_text, section_context):
-    # build the formated text
-    # the form for each part should be in the form of [CLS] current_part_text [SEP] full_song_context [SEP]
-    formatted_text = f"[CLS] {part_text} [SEP] {section_context} [SEP]"
-    return formatted_text
+# def build_format_text(part_text, section_context):
+#     # build the formated text
+#     # the form for each part should be in the form of [CLS] current_part_text [SEP] full_song_context [SEP]
+#     formatted_text = f"[CLS] {part_text} [SEP] {section_context} [SEP]"
+#     return formatted_text
+#
+# def format_single_part(part_text, section_context):
+#     return f"[CLS] {part_text} [SEP]"
 
 def prepare_data_for_training(parsed_data):
     """
@@ -140,12 +143,11 @@ def prepare_data_for_training(parsed_data):
                 continue
             section_context = " ".join(section_context)
             # build the data
-            format_text = build_format_text(part_text, section_context)
-            song_data.append((song_id, format_text, LABELS[section]))
+            song_data.append((song_id, part_text, section_context, LABELS[section]))
         if len(song_data)>1:
             random.shuffle(song_data)
             data.extend(song_data)
-    return pd.DataFrame(data, columns=["song_id", "text", "label"])
+    return pd.DataFrame(data, columns=["song_id", "text", "context", "label"])
 
 
 def get_data():

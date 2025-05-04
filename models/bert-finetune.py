@@ -9,6 +9,8 @@ import torch
 from datasets import Dataset
 from utils.preprocessing import get_data
 import os
+import argparse
+from pathlib import Path
 
 class CustomBertModel(nn.Module):
     def __init__(self, model_name, num_labels):
@@ -33,13 +35,21 @@ class BertFineTuner:
         self.epochs = epochs
         self.optimizer = AdamW(self.model.parameters(), lr=self.learning_rate)
 
-    def prepare_data(self, train_data, test_data):
+    def prepare_data(self, train_data, test_data, use_context=True):
         #make example dataset:
         train_dataset = Dataset.from_pandas(train_data)
         test_dataset = Dataset.from_pandas(test_data)
 
-        train_dataset = train_dataset.map(lambda x: self.tokenizer(x['text'], truncation=True, padding='max_length', max_length=512), batched=True)
-        test_dataset = test_dataset.map(lambda x: self.tokenizer(x['text'], truncation=True, padding='max_length', max_length=512), batched=True)
+        if use_context:
+            train_dataset = train_dataset.map(lambda x: self.tokenizer(x['text'], x['context'], truncation=True, padding='max_length', max_length=512), batched=True)
+            test_dataset = test_dataset.map(lambda x: self.tokenizer(x['text'], x['context'], truncation=True, padding='max_length', max_length=512), batched=True)
+        else:
+            train_dataset = train_dataset.map(
+                lambda x: self.tokenizer(x['text'], truncation=True, padding='max_length',
+                                         max_length=512), batched=True)
+            test_dataset = test_dataset.map(
+                lambda x: self.tokenizer(x['text'], truncation=True, padding='max_length',
+                                         max_length=512), batched=True)
 
         train_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
         test_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
@@ -93,7 +103,21 @@ class BertFineTuner:
         test_df = pd.DataFrame(predictions, columns=["predictions"])
         test_df.to_parquet("./data/test_predictions.parquet")
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no_context", action="store_true", help="Enable context using")
+    # Add other arguments here as needed
+    parser.add_argument("--output_dir", type=Path, default="../checkpoints/longformer")
+    parser.add_argument("--epochs", type=int, default=3)
+    parser.add_argument("--batch_size", type=int, default=2)
+    parser.add_argument("--lr", type=float, default=2e-5)
+    return parser.parse_args()
+
 if __name__ == "__main__":
+    args = parse_args()
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+
+    no_context = args.no_context
     model_name = 'bert-base-uncased'
     num_labels = 2
     dataset_name = 'mrYou/Lyrics_eng_dataset'
@@ -108,7 +132,7 @@ if __name__ == "__main__":
         os.makedirs('./data')
     train_data.to_parquet("./data/train_data.parquet")
     test_data.to_parquet("./data/test_data.parquet")
-    train_loader, test_loader = bert_fine_tuner.prepare_data(train_data, test_data)
+    train_loader, test_loader = bert_fine_tuner.prepare_data(train_data, test_data, use_context= not no_context )
 
     bert_fine_tuner.train(train_loader)
     bert_fine_tuner.evaluate(test_loader)
