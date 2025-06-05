@@ -11,7 +11,17 @@ from utils.preprocessing import get_data
 import os
 import argparse
 from pathlib import Path
+import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader, TensorDataset
 
+# Set your seed
+seed = 42
+g = torch.Generator()
+g.manual_seed(seed)
+
+# Dummy dataset
+x = torch.randn(100, 2)
+dataset = TensorDataset(x)
 class CustomBertModel(nn.Module):
     def __init__(self, model_name, num_labels):
         super(CustomBertModel, self).__init__()
@@ -41,8 +51,8 @@ class BertFineTuner:
         test_dataset = Dataset.from_pandas(test_data)
 
         if use_context:
-            train_dataset = train_dataset.map(lambda x: self.tokenizer(x['text'], x['context'], truncation=True, padding='max_length', max_length=512), batched=True)
-            test_dataset = test_dataset.map(lambda x: self.tokenizer(x['text'], x['context'], truncation=True, padding='max_length', max_length=512), batched=True)
+            train_dataset = train_dataset.map(lambda x: self.tokenizer(x['text'], x['context'], truncation='only_second', padding='max_length', max_length=512), batched=True)
+            test_dataset = test_dataset.map(lambda x: self.tokenizer(x['text'], x['context'], truncation='only_second', padding='max_length', max_length=512), batched=True)
         else:
             train_dataset = train_dataset.map(
                 lambda x: self.tokenizer(x['text'], truncation=True, padding='max_length',
@@ -54,10 +64,11 @@ class BertFineTuner:
         train_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
         test_dataset.set_format(type='torch', columns=['input_ids', 'attention_mask', 'label'])
 
-        return DataLoader(train_dataset, batch_size=self.batch_size, pin_memory=True), DataLoader(test_dataset, batch_size=self.batch_size, pin_memory=True)
+        return DataLoader(train_dataset, batch_size=self.batch_size, pin_memory=True, shuffle=True, generator=g), DataLoader(test_dataset, batch_size=self.batch_size, pin_memory=True)
 
     def train(self, train_loader):
         self.model.train()
+        losses =[]
         for epoch in range(self.epochs):
             for batch in train_loader:
                 input_ids = batch['input_ids'].to(self.model.device)
@@ -71,6 +82,9 @@ class BertFineTuner:
                 self.optimizer.step()
 
                 print(f"Epoch {epoch + 1}, Loss: {loss.item()}")
+                losses.append(loss.item())
+        plt.scatter(x = losses, y = [i+1 for i in range(len(losses))])
+        plt.show()
 
     def evaluate(self, test_loader):
         self.model.eval()

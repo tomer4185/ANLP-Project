@@ -171,6 +171,16 @@ def create_data_for_Longformer():
     data.to_json("../data/valid.jsonl", orient="records", lines=True)
 
 if __name__ == "__main__":
-    create_data_for_Longformer()
+    df = get_data().head(50)
+    # df = pd.DataFrame(data)
+
+    # Show all columns
+    pd.set_option('display.max_columns', None)
+
+    # Prevent truncation of column content
+    pd.set_option('display.max_colwidth', None)  # or use a large number like 1000
+
+    # Print the DataFrame
+    print(df)
 
 

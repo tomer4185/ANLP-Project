@@ -3,7 +3,6 @@ import re
 
 df = pd.read_parquet("hf://datasets/mrYou/Lyrics_eng_dataset/data/train-00000-of-00001.parquet")
 
-import re
 
 def parse_lyrics_sections(lyrics):
     # Define valid section labels with regex support
