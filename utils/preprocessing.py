@@ -89,7 +89,7 @@ def parse_lyrics_sections(lyrics):
 
     return result if saw_chorus and result else None
 
-def get_parsed_data(number_of_songs = 2000) -> dict:
+def get_parsed_data(number_of_songs = 2000, type="train") -> dict:
     """
     fetches parsed data from the database.
     returns a dict of dicts,
@@ -100,6 +100,9 @@ def get_parsed_data(number_of_songs = 2000) -> dict:
     df = pd.read_parquet("hf://datasets/mrYou/Lyrics_eng_dataset/data/train-00000-of-00001.parquet")
     print(f"initial num of songs {len(df)}")
     parsed_data = {}
+    if type == "test":
+        # get the test set - take the 2nd 2000 songs
+        df = df.iloc[number_of_songs:2*number_of_songs]
     for i, row in enumerate(df.head(number_of_songs).iterrows()):
         lyrics = row[1]["lyrics"]
         parsed_row = parse_lyrics_sections(lyrics)
@@ -150,11 +153,11 @@ def prepare_data_for_training(parsed_data):
     return pd.DataFrame(data, columns=["song_id", "text", "context", "label"])
 
 
-def get_data():
+def get_data(type="train"):
     """
     check out prepare_data_for_training
     """
-    parsed_data = get_parsed_data()
+    parsed_data = get_parsed_data(type=type)
     data = prepare_data_for_training(parsed_data)
     print("data parsed")
     return data
