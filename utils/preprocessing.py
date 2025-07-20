@@ -183,7 +183,6 @@ if __name__ == "__main__":
     # Prevent truncation of column content
     pd.set_option('display.max_colwidth', None)  # or use a large number like 1000
 
-    # Print the DataFrame
-    print(df)
+    df.to_excel('my_dataframe.xlsx', index=False)
 
 
